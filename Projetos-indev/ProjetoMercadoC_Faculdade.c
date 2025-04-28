@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <windows.h>
 #include <stdbool.h>
+
+int userCont = 1, loginCode = 0;
 
 // Estrutura 'produtos' representa um item à venda
 // - codigoProduto: identificador numérico do produto
@@ -17,10 +17,16 @@ struct produtos {
     float estoqueProduto;
 };
 
-/*struct usuarios {
-    char login[20]
+struct usuarios {
+    int usuario;
+    char login[20];
     char senha[20];
-};*/
+    bool administrador;
+};
+
+struct usuarios colaborador[userCont] = {
+    {1, "admin", "admin", 1}
+};
 
 
 // Lista de produtos da categoria Limpeza
@@ -86,7 +92,76 @@ void menuFalta(void);
 float aplicarDesconto(float);
 void menuCancelar(void);
 void menuCaixa(void);
+void acessoAdministrativo(void);
+void registrarUsuarios(void);
+void listarUsuarios(void);
 
+
+void registrarUsuarios() {
+    int permissao = 0;
+    system("clear");
+    printf("Informe o login:");
+    fgets(colaborador[userCont].login,sizeof(colaborador[userCont].login), stdin);
+    colaborador[userCont].login[strcspn(colaborador[userCont].login, "\n")] = '\0';
+    printf("Informe a senha:");
+    fgets(colaborador[userCont].senha, sizeof(colaborador[userCont].senha), stdin);
+    colaborador[userCont].senha[strcspn(colaborador[userCont].senha, "\n")] = '\0';
+    getchar();
+    system("clear");
+    while (permissao != 1 && permissao != 2) {
+        printf("Permissão de administrador?\n");
+        printf("1- SIM\n");
+        printf("2- NAO\n");
+        scanf("%d",&permissao);
+        if(permissao == 1) {
+            colaborador[userCont].administrador = 1;
+        } else {
+            colaborador[userCont].administrador = 0;
+        }
+    }
+    userCont++;
+}
+
+void listarUsuarios() {
+    printf("<Lista de usuarios>")
+
+}
+
+void acessoAdministrativo() {
+    system("clear");
+    if (colaborador[loginCode].administrador == 0) {
+        printf("Você não tem permissao para acessar esta area\n");
+        return;
+    }
+    do {
+        printf("1 - Listar usuarios\n");
+        printf("2 - Registrar usuario\n");
+        printf("3 - Listar produtos\n");
+        printf("4 - Registrar produtos\n");
+        printf("5 - Voltar\n");
+        scanf("%d",&opcao);
+        switch (opcao) {
+            case 1:
+                listarUsuarios();
+                break;
+            case 2:
+                registrarUsuarios();
+                break;
+            case 3:
+                listarProdutos();
+                break;
+            case 4:
+                registrarProdutos();
+                break;
+            case 5:
+                return;
+            default:
+                system("clear");
+                printf("Valor invalido, tente novamente...\n");
+        }
+    } while (opcao != 5);
+
+}
 
 // Menu para gerenciamento do caixa:
 // - Opção de abrir: solicita valor inicial e estoque para padaria
@@ -250,9 +325,9 @@ void menuFalta() {
                 if ( pagamento > 0 ) {
                     if ( pagamento >= falta) {
                         printf("\nPagamento realizado com sucesso!\n");
-                        totalAlimentos = carrinhoAlimentos;
-                        totalPadaria = carrinhoPadaria;
-                        totalLimpeza = carrinhoLimpeza;
+                        totalAlimentos += carrinhoAlimentos;
+                        totalPadaria += carrinhoPadaria;
+                        totalLimpeza += carrinhoLimpeza;
                         faturamento += falta;
                         troco = pagamento - falta;
                         carrinhoAlimentos = carrinhoPadaria = carrinhoLimpeza = total = totalDesconto = falta = 0;
@@ -971,7 +1046,8 @@ void menuPrincipal() {
         printf("4 - Pagamento\n");
         printf("5 - Caixa\n");
         printf("6 - Cancelar\n");
-        printf("7 - Sair\n");
+        printf("7 - Acesso administrativo\n");
+        printf("8 - Sair\n");
         printf("Carrinho total: %.2f R$\n",(carrinhoAlimentos + carrinhoPadaria + carrinhoLimpeza));
         printf("Opcao: ");
         scanf("%d", &opcao);
@@ -1000,6 +1076,9 @@ void menuPrincipal() {
                     menuCancelar();
                     break;
                 case 7:
+                    acessoAdministrativo();
+                    break;
+                case 8:
                     return;
                 default:
                     printf("Opcao invalida... tente novamente\n");
