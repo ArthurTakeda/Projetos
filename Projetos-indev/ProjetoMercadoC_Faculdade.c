@@ -123,7 +123,7 @@ void registrarUsuarios() {
 }
 
 void listarUsuarios() {
-    printf("<Lista de usuarios>")
+    printf("<Lista de usuarios>");
 
 }
 
