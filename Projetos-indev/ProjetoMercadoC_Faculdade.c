@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-
-int userCont = 1, loginCode = 0;
+//contador de registros //codigo de sessao login
+//int userCont = 2, loginCode = 0;
 
 // Estrutura 'produtos' representa um item à venda
 // - codigoProduto: identificador numérico do produto
@@ -24,9 +24,10 @@ struct usuarios {
     bool administrador;
 };
 
-struct usuarios colaborador[userCont] = {
+/*struct usuarios colaborador[userCont] = { // alterar para calloc e ponteiro
+    {0, "teste", "teste", 0},
     {1, "admin", "admin", 1}
-};
+};*/
 
 
 // Lista de produtos da categoria Limpeza
@@ -92,12 +93,12 @@ void menuFalta(void);
 float aplicarDesconto(float);
 void menuCancelar(void);
 void menuCaixa(void);
-void acessoAdministrativo(void);
+/*void acessoAdministrativo(void);
 void registrarUsuarios(void);
 void listarUsuarios(void);
 
 
-void registrarUsuarios() {
+void registrarUsuarios() { //está ok basta apenas alterar depois quando implementar ponteiros e alocação
     int permissao = 0;
     system("clear");
     printf("Informe o login:");
@@ -124,10 +125,28 @@ void registrarUsuarios() {
 
 void listarUsuarios() {
     printf("<Lista de usuarios>");
-
+    printf("Codigo\tUsuario\tPermissao");
+    for (int i = 0; i < userCont; i++) {
+        printf("%d\t%s", colaborador[i].usuario, colaborador[i].login);
+        if (colaborador[i].administrador == 1) {
+            printf("\tAdministrador\n");
+        } else if (colaborador[i].administrador == 0) {
+            printf("\tColaborador\n");
+        }
+    }
+    printf("1 - Editar usuario\n"); // só dá pra criar após fazer aloc e ponteiros
+    printf("2 - Remover usuario\n"); // só dá pra criar após fazer aloc e ponteiros
+    printf("3 - Voltar\n");
+    scanf("%d",&opcao);
+    switch (opcao) {
+        case 1:
+        case 2:
+        case 3:
+        default:
+    }
 }
 
-void acessoAdministrativo() {
+void acessoAdministrativo() { // ainda com muitas coisas p alterar
     system("clear");
     if (colaborador[loginCode].administrador == 0) {
         printf("Você não tem permissao para acessar esta area\n");
@@ -161,7 +180,7 @@ void acessoAdministrativo() {
         }
     } while (opcao != 5);
 
-}
+}*/
 
 // Menu para gerenciamento do caixa:
 // - Opção de abrir: solicita valor inicial e estoque para padaria
@@ -1076,7 +1095,7 @@ void menuPrincipal() {
                     menuCancelar();
                     break;
                 case 7:
-                    acessoAdministrativo();
+                    //acessoAdministrativo();
                     break;
                 case 8:
                     return;
