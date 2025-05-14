@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 //contador de registros //codigo de sessao login
-int user_cont = 2, limpeza_cont = 7, alimentos_cont = 7, padaria_cont = 7, loginCode = 0;
+int user_cont = 1, limpeza_cont = 10, alimentos_cont = 10, padaria_cont = 10, cadastrados_cont = 10, login_code = 0;
 
 // Estrutura 'produtos' representa um item à venda
 // - codigo_produto: identificador numérico do produto
@@ -19,51 +19,18 @@ typedef struct {
 
 typedef struct {
     int id_usuario;
-    int usuario;
     char login[20];
     char senha[20];
     int nivel_acesso; // 1 - adm // 2 - gerente // 3 - cadastrados
 } usuarios;
 
-usuarios cadastrados[user_cont] = { // alterar para calloc e ponteiro
-    {0, 0, "teste", "teste", 3},
-    {1 , 1, "admin", "admin", 1}
-};
-
-
+usuarios **cadastrados = NULL;
 // Lista de produtos da categoria Limpeza
-produtos limpeza[limpeza_cont] = {
-    {1, "Produto 1", 7.90, 10},
-    {2, "Produto 2", 7.80, 10},
-    {3, "Produto 3", 7.75, 10},
-    {4, "Produto 4", 7.70, 10},
-    {5, "Produto 5", 7.70, 10},
-    {6, "Produto 6", 7.70, 10},
-    {7, "Produto 7", 7.70, 10}};
-
-
+produtos **limpeza = NULL;
 // Lista de produtos da categoria Alimentos
-produtos alimentos[alimentos_cont] ={
-    {1, "Produto 8", 7.90, 10},
-    {2, "Produto 9", 7.80, 10},
-    {3, "Produto 10", 7.75, 10},
-    {4, "Produto 11", 7.70, 10},
-    {5, "Produto 12", 7.70, 10},
-    {6, "Produto 13", 7.70, 10},
-    {7, "Produto 14", 7.70, 10}};
-
-
-
+produtos **alimentos = NULL;
 // Lista de produtos da categoria Padaria (estoque iniciado em 0)
-produtos padaria[padaria_cont] ={
-    {1, "Produto 15", 7.90, 0},
-    {2, "Produto 16", 7.80, 0},
-    {3, "Produto 17", 7.75, 0},
-    {4, "Produto 18", 7.70, 0},
-    {5, "Produto 19", 7.70, 0},
-    {6, "Produto 20", 7.70, 0},
-    {7, "Produto 21", 7.70, 0}};
-
+produtos **padaria = NULL;
 
 // Variáveis globais para controle do sistema:
 // - opcao: controla seleções de menu
@@ -85,34 +52,177 @@ void menu_limpeza(void);
 void menu_alimento(void);
 void menu_padaria(void);
 void menu_pagamento(void);
-void menuFalta(void);
-
-// Calcula e aplica desconto conforme o total:
-// - Até R$50: 5% de desconto
-// - Até R$200: 10% de desconto
-// - Acima disso: desconto personalizado informado pelo usuário
-float aplicarDesconto(float);
+void menu_falta(void);
+void login_acesso(void);
 void menu_cancelar(void);
 void menu_caixa(void);
 void acesso_adm(void);
 void registrar_usuarios(void);
 void listar_usuarios(void);
 
+// Calcula e aplica desconto conforme o total:
+// - Até R$50: 5% de desconto
+// - Até R$200: 10% de desconto
+// - Acima disso: desconto personalizado informado pelo usuário
+float aplicar_desconto(float);
+
+void login_acesso() {
+    login_code = -1;
+    // Cria vetor de ponteiros para usuarios, com 1 usuário inicial
+    usuarios **cadastrados = malloc(sizeof(usuarios *) * cadastrados_cont);
+    if (cadastrados == NULL) {
+        printf("Erro de alocação de memória.\n");
+        return;
+    }
+
+    // Aloca e inicializa o primeiro usuário (admin)
+    cadastrados[0] = malloc(sizeof(usuarios));
+    if (cadastrados[0] == NULL) {
+        printf("Erro de alocação de memória.\n");
+        free(cadastrados);
+        return;
+    }
+
+    cadastrados[0]->id_usuario = 0;
+    strcpy(cadastrados[0]->login, "admin");
+    strcpy(cadastrados[0]->senha, "admin");
+    cadastrados[0]->nivel_acesso = 1;
+
+    // Variáveis temporárias
+    char login_temp[40];
+    char senha_temp[40];
+
+    do {
+        system("cls");
+        printf("Usuario:\n");
+        fgets(login_temp, sizeof(login_temp), stdin);
+        printf("Senha:\n");
+        fgets(senha_temp, sizeof(senha_temp), stdin);
+
+        // Remove o \n que o fgets coloca
+        login_temp[strcspn(login_temp, "\n")] = '\0';
+        senha_temp[strcspn(senha_temp, "\n")] = '\0';
+
+        login_code = -1; // reinicia
+
+        for (int i = 0; i < cadastrados_cont; i++) {
+            if (strcmp(login_temp, cadastrados[i]->login) == 0 &&
+                strcmp(senha_temp, cadastrados[i]->senha) == 0) {
+                printf("Login realizado com sucesso!\n");
+                login_code = i;
+                system("pause");
+                menu_principal();
+                break;
+                }
+        }
+
+        if (login_code == -1) {
+            printf("Login e/ou senha invalidos! Tente novamente..\n");
+            system("pause");
+        }
+
+    } while (login_code == -1);
+
+    // Liberação da memória alocada
+    for (int i = 0; i < cadastrados_cont; i++) {
+        free(cadastrados[i]);
+    }
+    free(cadastrados);
+}
+
 void registrar_produtos() {
+    do {
+        system("cls");
+        printf("Selecione a categoria\n");
+        printf("1- Alimento");
+        printf("2- Padaria");
+        printf("3- Alimentos");
+        printf("4- Voltar");
+        scanf("%d", &opcao);
+        switch (opcao) {
+            case 1:
+                alimentos_cont += 1;
+                alimentos = realloc(alimentos, alimentos_cont * sizeof(produtos));
+                if (alimentos == NULL) {
+                    printf("Erro ao alocar produtos\n");
+                }
+                system("cls");
+                alimentos[alimentos_cont]->codigo_produto = alimentos_cont;
+                printf("Informe o nome do produto:\n");
+                fgets(alimentos[alimentos_cont]->nome_produto, 20, stdin);
+                alimentos[alimentos_cont]->nome_produto[strcspn(alimentos[alimentos_cont]->nome_produto, "\n")] = '\0';
+                do {
+                    printf("Informe o valor do produto:\n");
+                    scanf("%f", &alimentos[alimentos_cont]->valor_produto);
+                } while (alimentos[alimentos_cont]->valor_produto < 0);
+                do {
+                    printf("Informe o estoque do produto:\n");
+                    scanf("%f", &alimentos[alimentos_cont]->estoque_produto);
+                } while (alimentos[alimentos_cont]->estoque_produto < 0);
+                getchar();alimentos_cont++; break;
+            case 2:
+                padaria_cont += 1;
+                padaria = realloc(padaria, padaria_cont * sizeof(produtos));
+                if (padaria == NULL) {
+                    printf("Erro ao alocar produtos\n");
+                }
+                system("cls");
+                padaria[padaria_cont]->codigo_produto = padaria_cont;
+                printf("Informe o nome do produto:\n");
+                fgets(padaria[padaria_cont]->nome_produto, 20, stdin);
+                padaria[padaria_cont]->nome_produto[strcspn(padaria[padaria_cont]->nome_produto, "\n")] = '\0';
+                do {
+                    printf("Informe o valor do produto:\n");
+                    scanf("%f", &padaria[padaria_cont]->valor_produto);
+                }while (padaria[padaria_cont]->valor_produto < 0);
+                do {
+                    printf("Informe o estoque do produto:\n");
+                    scanf("%f", &padaria[padaria_cont]->estoque_produto);
+                }while (padaria[padaria_cont]->estoque_produto < 0);
+                getchar();padaria_cont++; break;
+            case 3:
+                limpeza_cont += 1;
+                limpeza = realloc(limpeza, limpeza_cont * sizeof(produtos));
+                if (limpeza == NULL) {
+                    printf("Erro ao alocar produtos\n");
+                }
+                system("cls");
+                limpeza[limpeza_cont]->codigo_produto = limpeza_cont;
+                printf("Informe o nome do produto:\n");
+                fgets(limpeza[limpeza_cont]->nome_produto, 20, stdin);
+                limpeza[limpeza_cont]->nome_produto[strcspn(limpeza[limpeza_cont]->nome_produto, "\n")] = '\0';
+                do {
+                    printf("Informe o valor do produto:\n");
+                    scanf("%f", &limpeza[limpeza_cont]->valor_produto);
+                }while (limpeza[limpeza_cont]->valor_produto < 0);
+                do {
+                    printf("Informe o estoque do produto:\n");
+                    scanf("%f", &limpeza[limpeza_cont]->estoque_produto);
+                }while (limpeza[limpeza_cont]->estoque_produto < 0);
+                getchar();limpeza_cont++; break;
+            case 4: return; break;
+        }
+    }while (opcao != 4);
+    
 
 }
 
 void registrar_usuarios() { //está ok basta apenas alterar depois quando implementar ponteiros e alocação
+    cadastrados_cont += 1;
+    cadastrados = realloc(cadastrados, cadastrados_cont * sizeof(produtos));
+    if (cadastrados == NULL) {
+        printf("Erro ao alocar usuarios");
+    }
     int permissao = 0;
-    system("clear");
+    system("cls");
     printf("Informe o login:");
-    fgets(cadastrados[user_cont].login,sizeof(cadastrados[user_cont].login), stdin);
-    cadastrados[user_cont].login[strcspn(cadastrados[user_cont].login, "\n")] = '\0';
+    fgets(cadastrados[user_cont]->login,sizeof(cadastrados[user_cont]->login), stdin);
+    cadastrados[user_cont]->login[strcspn(cadastrados[user_cont]->login, "\n")] = '\0';
     printf("Informe a senha:");
-    fgets(cadastrados[user_cont].senha, sizeof(cadastrados[user_cont].senha), stdin);
-    cadastrados[user_cont].senha[strcspn(cadastrados[user_cont].senha, "\n")] = '\0';
+    fgets(cadastrados[user_cont]->senha, sizeof(cadastrados[user_cont]->senha), stdin);
+    cadastrados[user_cont]->senha[strcspn(cadastrados[user_cont]->senha, "\n")] = '\0';
     getchar();
-    system("clear");
+    system("cls");
     while (permissao != 1 && permissao != 2 && permissao != 3) {
         printf("Permissão de acesso?\n");
         printf("1- ADMINISTRATIVO\n");
@@ -120,11 +230,11 @@ void registrar_usuarios() { //está ok basta apenas alterar depois quando implem
         printf("3- COLABORADOR\n");
         scanf("%d",&permissao);
         if(permissao == 1) {
-            cadastrados[user_cont].nivel_acesso = 1;
+            cadastrados[user_cont]->nivel_acesso = 1;
         } else if (permissao == 2) {
-            cadastrados[user_cont].nivel_acesso = 2;
+            cadastrados[user_cont]->nivel_acesso = 2;
         } else if (permissao == 3) {
-            cadastrados[user_cont].nivel_acesso = 3;
+            cadastrados[user_cont]->nivel_acesso = 3;
         }
     }
     user_cont++;
@@ -134,7 +244,7 @@ void listar_usuarios() {
     printf("<Lista de usuarios>");
     printf("Codigo\tUsuario\tPermissao");
     for (int i = 0; i < user_cont; i++) {
-        printf("%d\t%s", cadastrados[i].usuario, cadastrados[i].login);
+        printf("%d\t%s", cadastrados[i]->id_usuario, cadastrados[i]->login);
     }
 }
 
@@ -149,26 +259,26 @@ void listar_produtos() {
         scanf("%d",&opcao);
         switch (opcao) {
             case 1: // limpeza
-                system("clear");
+                system("cls");
                 printf("Cod | \tNome\t|\tValor\t| Estoque \n");
                 for (int i = 0; i < 7; i++) {
-                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), limpeza[i].nome_produto, limpeza[i].valor_produto, limpeza[i].estoque_produto);
+                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), limpeza[i]->nome_produto, limpeza[i]->valor_produto, limpeza[i]->estoque_produto);
                 }
                 system("pause");
                 break;
             case 2: // alimentos
-                system("clear");
+                system("cls");
                 printf("Cod | \tNome\t|\tValor\t| Estoque \n");
                 for (int i = 0; i < 7; i++) {
-                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), alimentos[i].nome_produto, alimentos[i].valor_produto, alimentos[i].estoque_produto);
+                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), alimentos[i]->nome_produto, alimentos[i]->valor_produto, alimentos[i]->estoque_produto);
                 }
                 system("pause");
                 break;
             case 3: //padaria
-                system("clear");
+                system("cls");
                 printf("Cod | \tNome\t|\tValor\t| Estoque \n");
                 for (int i = 0; i < 7; i++) {
-                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), padaria[i].nome_produto, padaria[i].valor_produto, padaria[i].estoque_produto);
+                    printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), padaria[i]->nome_produto, padaria[i]->valor_produto, padaria[i]->estoque_produto);
                 }
                 system("pause");
                 break;
@@ -179,8 +289,8 @@ void listar_produtos() {
 }
 
 void acesso_adm() { // ainda com muitas coisas p alterar
-    system("clear");
-    if (cadastrados[loginCode].nivel_acesso != 1) {
+    system("cls");
+    if (cadastrados[login_code]->nivel_acesso != 1) {
         printf("Você não tem permissao para acessar esta area\n");
         return;
     }
@@ -207,7 +317,7 @@ void acesso_adm() { // ainda com muitas coisas p alterar
             case 5:
                 return;
             default:
-                system("clear");
+                system("cls");
                 printf("Valor invalido, tente novamente...\n");
         }
     } while (opcao != 5);
@@ -248,12 +358,12 @@ void menu_caixa() {
             printf("\nInforme o estoque da padaria");
             for (int i = 0; i < 7; i++) {
                 do {
-                    printf("\nInforme a quantidade de %s em estoque: ", padaria[i].nome_produto);
+                    printf("\nInforme a quantidade de %s em estoque: ", padaria[i]->nome_produto);
                     scanf("%f", &acrescentaEstoque);
                     if (acrescentaEstoque < 0)
                         printf("Informe um valor valido\n");
                 } while (acrescentaEstoque < 0);
-                padaria[i].estoque_produto = acrescentaEstoque;
+                padaria[i]->estoque_produto = acrescentaEstoque;
             }
             status_caixa = true;
             printf("O caixa foi aberto!\n");
@@ -307,15 +417,15 @@ void menu_cancelar() {
             carrinho_limpeza = carrinho_padaria = carrinho_alimentos = 0;
             // DEVOLVE PRODUTOS DA LIMPEZA AO ESTOQUE
             for (int i = 0; i < 7; i++)
-                limpeza[i].estoque_produto += estoque_temp[i];
+                limpeza[i]->estoque_produto += estoque_temp[i];
             // DEVOLVE PRODUTOS DE ALIMENTOS AO ESTOQUE
             for (int j = 7; j < 14; j++) {
-                alimentos[k].estoque_produto += estoque_temp[j];
+                alimentos[k]->estoque_produto += estoque_temp[j];
                 k++;
             }
             // DEVOLVE PRODUTOS DA PADARIA AO ESTOQUE
             for (int l = 14; l < 21; l++) {
-                padaria[m].estoque_produto += estoque_temp[l];
+                padaria[m]->estoque_produto += estoque_temp[l];
                 m++;
             }
             printf("\nVenda cancelada! Produtos devolvidos ao estoque\n");
@@ -338,7 +448,7 @@ void menu_cancelar() {
 // - Até R$50: 5% de desconto
 // - Até R$200: 10% de desconto
 // - Acima disso: desconto personalizado informado pelo usuário
-float aplicarDesconto(float x) {
+float aplicar_desconto(float x) {
     if (x <= 50) {
         guarda_desconto = x * 0.05;
     return total_desconto = x - guarda_desconto;
@@ -359,7 +469,7 @@ float aplicarDesconto(float x) {
 // Menu para lidar com pagamentos pendentes (valores parciais):
 // - Permite completar com dinheiro ou cartão
 // - Atualiza valores pendentes e calcula troco se necessário
-void menuFalta() {
+void menu_falta() {
     do {
         system("cls");
         printf("Menu Pagamento Pendente\n");
@@ -392,11 +502,11 @@ void menuFalta() {
                         falta = falta - pagamento;
                         printf("Ainda restou valores\n");
                         system("pause");
-                        menuFalta();
+                        menu_falta();
                     }
                 } else {
                     printf("Valor invalido, tente novamente...\n");
-                    menuFalta();
+                    menu_falta();
                 }
             case 2:
                 printf("1 - Pagamento realizado\n");
@@ -415,14 +525,14 @@ void menuFalta() {
                 else if (opcao == 2) {
                     printf("Pagamento Nao Realizado\n");
                     system("pause");
-                    menuFalta();
+                    menu_falta();
                 }
                 else if (opcao == 3) {
-                    menuFalta();
+                    menu_falta();
                 } else {
                     printf("Opcao invalida\n");
                     system("pause");
-                    menuFalta();
+                    menu_falta();
                 }
                 break;
 
@@ -432,7 +542,7 @@ void menuFalta() {
             default:
                 printf("Opcao invalida\n");
                 system("pause");
-                menuFalta();
+                menu_falta();
                 break;
 
         }
@@ -462,13 +572,13 @@ void menu_pagamento() {
             if (falta == 0) {
                 if (total <= 50) {
                     printf("\nDesconto de 5%% aplicado\n");
-                    total_desconto = aplicarDesconto(total);
+                    total_desconto = aplicar_desconto(total);
                 }
                 else if (total <= 200) {
                     printf("\nDesconto de 10%% aplicado\n");
-                    total_desconto = aplicarDesconto(total);
+                    total_desconto = aplicar_desconto(total);
                 } else {
-                    total_desconto = aplicarDesconto(total);
+                    total_desconto = aplicar_desconto(total);
                     printf("\nDesconto de %0.f%% aplicado\n", (desconto_informado * 100));
                 }
                 printf("Valor total: %.2f R$\n", total);
@@ -476,7 +586,7 @@ void menu_pagamento() {
                 printf("Informe o valor recebido:");
                 scanf("%f", &pagamento);
             }else {
-                menuFalta();
+                menu_falta();
             }
                 if (pagamento < 0) {
                     printf("Valor invalido, tente novamente...\n");
@@ -502,7 +612,7 @@ void menu_pagamento() {
                     faturamento += pagamento;
                     falta = total - pagamento;
                     system("pause");
-                    menuFalta();
+                    menu_falta();
                 }
             break;
 
@@ -556,8 +666,8 @@ void menu_padaria() {
         system("cls");
         printf("<Menu Padaria>\n");
         printf("Cod | \tNome\t|\tValor\t| Estoque \n");
-        for (int i = 0; i < 7; i++) {
-            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), padaria[i].nome_produto, padaria[i].valor_produto, padaria[i].estoque_produto);
+        for (int i = 0; i < padaria_cont; i++) {
+            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), padaria[i]->nome_produto, padaria[i]->valor_produto, padaria[i]->estoque_produto);
         }
         printf("8 - Voltar\n");
         printf("Carrinho Padaria: %.2f R$\n", carrinho_padaria);
@@ -566,7 +676,7 @@ void menu_padaria() {
 
         switch (opcao) {
             case 1:
-                printf("\n%s\n", padaria[0].nome_produto);
+                printf("\n%s\n", padaria[opcao]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -574,25 +684,25 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[0].estoque_produto) {
+                if (quantidade > padaria[opcao]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[0].estoque_produto -= quantidade;
+                padaria[opcao]->estoque_produto -= quantidade;
                 estoque_temp[14] += quantidade;
                 if (quantidade < 0) {
                     printf("Quantidade invalida... tente novamente");
                     system("pause");
                     menu_padaria();
                 }
-                carrinho_padaria += padaria[0].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[0].nome_produto);
+                carrinho_padaria += padaria[opcao]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[opcao]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 2:
-                printf("\n%s\n", padaria[1].nome_produto);
+                printf("\n%s\n", padaria[1]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -600,20 +710,20 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[1].estoque_produto) {
+                if (quantidade > padaria[1]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[1].estoque_produto -= quantidade;
+                padaria[1]->estoque_produto -= quantidade;
                 estoque_temp[15] += quantidade;
-                carrinho_padaria += padaria[1].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[1].nome_produto);
+                carrinho_padaria += padaria[1]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[1]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 3:
-                printf("\n%s\n", padaria[2].nome_produto);
+                printf("\n%s\n", padaria[2]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -621,20 +731,20 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[2].estoque_produto) {
+                if (quantidade > padaria[2]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[2].estoque_produto -= quantidade;
+                padaria[2]->estoque_produto -= quantidade;
                 estoque_temp[16] += quantidade;
-                carrinho_padaria+= padaria[2].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[2].nome_produto);
+                carrinho_padaria+= padaria[2]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[2]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 4:
-                printf("\n%s\n", padaria[3].nome_produto);
+                printf("\n%s\n", padaria[3]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -642,20 +752,20 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[3].estoque_produto) {
+                if (quantidade > padaria[3]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[3].estoque_produto -= quantidade;
+                padaria[3]->estoque_produto -= quantidade;
                 estoque_temp[17] += quantidade;
-                carrinho_padaria+= padaria[3].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[3].nome_produto);
+                carrinho_padaria+= padaria[3]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[3]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 5:
-                printf("\n%s\n", padaria[4].nome_produto);
+                printf("\n%s\n", padaria[4]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -663,20 +773,20 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[4].estoque_produto) {
+                if (quantidade > padaria[4]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[4].estoque_produto -= quantidade;
+                padaria[4]->estoque_produto -= quantidade;
                 estoque_temp[18] += quantidade;
-                carrinho_padaria+= padaria[4].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[4].nome_produto);
+                carrinho_padaria+= padaria[4]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[4]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 6:
-                printf("\n%s\n", padaria[5].nome_produto);
+                printf("\n%s\n", padaria[5]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -684,20 +794,20 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[5].estoque_produto) {
+                if (quantidade > padaria[5]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[5].estoque_produto -= quantidade;
+                padaria[5]->estoque_produto -= quantidade;
                 estoque_temp[19] += quantidade;
-                carrinho_padaria+= padaria[5].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[5].nome_produto);
+                carrinho_padaria+= padaria[5]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[5]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
             case 7:
-                printf("\n%s\n", padaria[6].nome_produto);
+                printf("\n%s\n", padaria[6]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -705,15 +815,15 @@ void menu_padaria() {
                     system("pause");
                     menu_padaria();
                 }
-                if (quantidade > padaria[6].estoque_produto) {
+                if (quantidade > padaria[6]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_padaria();
                 }
-                padaria[6].estoque_produto -= quantidade;
+                padaria[6]->estoque_produto -= quantidade;
                 estoque_temp[20] += quantidade;
-                carrinho_padaria+= padaria[6].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[6].nome_produto);
+                carrinho_padaria+= padaria[6]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, padaria[6]->nome_produto);
                 system("pause");
                 menu_padaria();
                 break;
@@ -738,7 +848,7 @@ void menu_alimento() {
         printf("<Menu Alimento>\n");
         printf("Cod | \tNome\t|\tValor\t| Estoque \n");
         for (int i = 0; i < 7; i++) {
-            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), alimentos[i].nome_produto, alimentos[i].valor_produto, alimentos[i].estoque_produto);
+            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), alimentos[i]->nome_produto, alimentos[i]->valor_produto, alimentos[i]->estoque_produto);
         }
         printf("8 - Voltar\n");
         printf("Carrinho Alimentos: %.2f R$\n", carrinho_alimentos);
@@ -747,7 +857,7 @@ void menu_alimento() {
 
         switch (opcao) {
             case 1:
-                printf("\n%s\n", alimentos[0].nome_produto);
+                printf("\n%s\n", alimentos[0]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -755,20 +865,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[0].estoque_produto) {
+                if (quantidade > alimentos[0]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[0].estoque_produto -= quantidade;
+                alimentos[0]->estoque_produto -= quantidade;
                 estoque_temp[7] += quantidade;
-                carrinho_alimentos += alimentos[0].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[0].nome_produto);
+                carrinho_alimentos += alimentos[0]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[0]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 2:
-                printf("\n%s\n", alimentos[1].nome_produto);
+                printf("\n%s\n", alimentos[1]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -776,20 +886,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[1].estoque_produto) {
+                if (quantidade > alimentos[1]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[1].estoque_produto -= quantidade;
+                alimentos[1]->estoque_produto -= quantidade;
                 estoque_temp[8] += quantidade;
-                carrinho_alimentos += alimentos[1].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[1].nome_produto);
+                carrinho_alimentos += alimentos[1]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[1]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 3:
-                printf("\n%s\n", alimentos[2].nome_produto);
+                printf("\n%s\n", alimentos[2]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -797,20 +907,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[2].estoque_produto) {
+                if (quantidade > alimentos[2]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[2].estoque_produto -= quantidade;
+                alimentos[2]->estoque_produto -= quantidade;
                 estoque_temp[9] += quantidade;
-                carrinho_alimentos+= alimentos[2].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[2].nome_produto);
+                carrinho_alimentos+= alimentos[2]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[2]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 4:
-                printf("\n%s\n", alimentos[3].nome_produto);
+                printf("\n%s\n", alimentos[3]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -818,20 +928,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[3].estoque_produto) {
+                if (quantidade > alimentos[3]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[3].estoque_produto -= quantidade;
+                alimentos[3]->estoque_produto -= quantidade;
                 estoque_temp[10] += quantidade;
-                carrinho_alimentos+= alimentos[3].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[3].nome_produto);
+                carrinho_alimentos+= alimentos[3]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[3]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 5:
-                printf("\n%s\n", alimentos[4].nome_produto);
+                printf("\n%s\n", alimentos[4]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -839,20 +949,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[4].estoque_produto) {
+                if (quantidade > alimentos[4]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[4].estoque_produto -= quantidade;
+                alimentos[4]->estoque_produto -= quantidade;
                 estoque_temp[11] += quantidade;
-                carrinho_alimentos+= alimentos[4].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[4].nome_produto);
+                carrinho_alimentos+= alimentos[4]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[4]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 6:
-                printf("\n%s\n", alimentos[5].nome_produto);
+                printf("\n%s\n", alimentos[5]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -860,20 +970,20 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[5].estoque_produto) {
+                if (quantidade > alimentos[5]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[5].estoque_produto -= quantidade;
+                alimentos[5]->estoque_produto -= quantidade;
                 estoque_temp[12] += quantidade;
-                carrinho_alimentos+= alimentos[5].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[5].nome_produto);
+                carrinho_alimentos+= alimentos[5]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[5]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
             case 7:
-                printf("\n%s\n", alimentos[6].nome_produto);
+                printf("\n%s\n", alimentos[6]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -881,15 +991,15 @@ void menu_alimento() {
                     system("pause");
                     menu_alimento();
                 }
-                if (quantidade > alimentos[6].estoque_produto) {
+                if (quantidade > alimentos[6]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_alimento();
                 }
-                alimentos[6].estoque_produto -= quantidade;
+                alimentos[6]->estoque_produto -= quantidade;
                 estoque_temp[13] += quantidade;
-                carrinho_alimentos+= alimentos[6].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[6].nome_produto);
+                carrinho_alimentos+= alimentos[6]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, alimentos[6]->nome_produto);
                 system("pause");
                 menu_alimento();
                 break;
@@ -915,7 +1025,7 @@ void menu_limpeza() {
         printf("<Menu Limpeza>\n");
         printf("Cod | \tNome\t|\tValor\t| Estoque \n");
         for (int i = 0; i < 7; i++) {
-            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), limpeza[i].nome_produto, limpeza[i].valor_produto, limpeza[i].estoque_produto);
+            printf("%d - \t%s \t%.2f \t    (%.0f)\n", (i + 1), limpeza[i]->nome_produto, limpeza[i]->valor_produto, limpeza[i]->estoque_produto);
         }
         printf("8 - Voltar\n");
         printf("Carrinho Limpeza: %.2f R$\n", carrinho_limpeza);
@@ -924,7 +1034,7 @@ void menu_limpeza() {
 
         switch (opcao) {
             case 1:
-                printf("\n%s\n", limpeza[0].nome_produto);
+                printf("\n%s\n", limpeza[0]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -932,20 +1042,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[0].estoque_produto) {
+                if (quantidade > limpeza[0]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[0].estoque_produto -= quantidade;
+                limpeza[0]->estoque_produto -= quantidade;
                 estoque_temp[0] += quantidade;
-                carrinho_limpeza += limpeza[0].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[0].nome_produto);
+                carrinho_limpeza += limpeza[0]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[0]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 2:
-                printf("\n%s\n", limpeza[1].nome_produto);
+                printf("\n%s\n", limpeza[1]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -953,20 +1063,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[1].estoque_produto) {
+                if (quantidade > limpeza[1]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[1].estoque_produto -= quantidade;
+                limpeza[1]->estoque_produto -= quantidade;
                 estoque_temp[1] += quantidade;
-                carrinho_limpeza += limpeza[1].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[1].nome_produto);
+                carrinho_limpeza += limpeza[1]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[1]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 3:
-                printf("\n%s\n", limpeza[2].nome_produto);
+                printf("\n%s\n", limpeza[2]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -974,20 +1084,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[2].estoque_produto) {
+                if (quantidade > limpeza[2]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[2].estoque_produto -= quantidade;
+                limpeza[2]->estoque_produto -= quantidade;
                 estoque_temp[2] += quantidade;
-                carrinho_limpeza+= limpeza[2].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[2].nome_produto);
+                carrinho_limpeza+= limpeza[2]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[2]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 4:
-                printf("\n%s\n", limpeza[3].nome_produto);
+                printf("\n%s\n", limpeza[3]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -995,20 +1105,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[3].estoque_produto) {
+                if (quantidade > limpeza[3]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[3].estoque_produto -= quantidade;
+                limpeza[3]->estoque_produto -= quantidade;
                 estoque_temp[3] += quantidade;
-                carrinho_limpeza+= limpeza[3].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[3].nome_produto);
+                carrinho_limpeza+= limpeza[3]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[3]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 5:
-                printf("\n%s\n", limpeza[4].nome_produto);
+                printf("\n%s\n", limpeza[4]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -1016,20 +1126,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[4].estoque_produto) {
+                if (quantidade > limpeza[4]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[4].estoque_produto -= quantidade;
+                limpeza[4]->estoque_produto -= quantidade;
                 estoque_temp[4] += quantidade;
-                carrinho_limpeza+= limpeza[4].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[4].nome_produto);
+                carrinho_limpeza+= limpeza[4]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[4]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 6:
-                printf("\n%s\n", limpeza[5].nome_produto);
+                printf("\n%s\n", limpeza[5]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -1037,20 +1147,20 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[5].estoque_produto) {
+                if (quantidade > limpeza[5]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[5].estoque_produto -= quantidade;
+                limpeza[5]->estoque_produto -= quantidade;
                 estoque_temp[5] += quantidade;
-                carrinho_limpeza+= limpeza[5].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[5].nome_produto);
+                carrinho_limpeza+= limpeza[5]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[5]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
             case 7:
-                printf("\n%s\n", limpeza[6].nome_produto);
+                printf("\n%s\n", limpeza[6]->nome_produto);
                 printf("Informe a quantidade: ");
                 scanf("%d", &quantidade);
                 if (quantidade < 0) {
@@ -1058,15 +1168,15 @@ void menu_limpeza() {
                     system("pause");
                     menu_limpeza();
                 }
-                if (quantidade > limpeza[6].estoque_produto) {
+                if (quantidade > limpeza[6]->estoque_produto) {
                     printf("\nEstoque insuficiente, tente novamente\n");
                     system("pause");
                     menu_limpeza();
                 }
-                limpeza[6].estoque_produto -= quantidade;
+                limpeza[6]->estoque_produto -= quantidade;
                 estoque_temp[6] += quantidade;
-                carrinho_limpeza+= limpeza[6].valor_produto * quantidade;
-                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[6].nome_produto);
+                carrinho_limpeza+= limpeza[6]->valor_produto * quantidade;
+                printf("Adicionado %d x %s ao carrinho\n", quantidade, limpeza[6]->nome_produto);
                 system("pause");
                 menu_limpeza();
                 break;
@@ -1127,7 +1237,7 @@ void menu_principal() {
                     menu_cancelar();
                     break;
                 case 7:
-                    //acesso_adm();
+                    acesso_adm();
                     break;
                 case 8:
                     return;
@@ -1139,7 +1249,7 @@ void menu_principal() {
 
             }
         }
-    }while(opcao != 7);
+    }while(opcao != 8);
 }
 
 
@@ -1148,6 +1258,6 @@ void menu_principal() {
 // - Inicia o menu principal
 int main(){
     system("color 0a");
-    menu_principal();
+    login_acesso();
 return 0;
 }
